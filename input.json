@@ -1,0 +1,47 @@
+{
+    "problem": {
+        "domain_type": "square",
+        "hole_center_x": 0.5,
+        "hole_center_y": 0.5,
+        "hole_radius": 0.25
+    },
+    
+    "grid": {
+        "nx": 32,
+        "ny": 32
+    },
+    
+    "boundary": {
+        "left": {
+            "type": "dirichlet",
+            "value": "from_test_function",
+            "description": "x=0"
+        },
+        "right": {
+            "type": "dirichlet",
+            "value": "from_test_function",
+            "description": "x=1"
+        },
+        "bottom": {
+            "type": "dirichlet",
+            "value": "from_test_function",
+            "description": "y=0"
+        },
+        "top": {
+            "type": "dirichlet",
+            "value": "from_test_function",
+            "description": "y=1"
+        }
+    },
+    
+    "test_function": {
+        "name": "exp_y_sin_x",
+        "description": "u(x,y) = exp(y + sin(x))"
+    },
+    
+    "output": {
+        "verbose": true,
+        "save_solution": false,
+        "output_dir": "./results"
+    }
+}
