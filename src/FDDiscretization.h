@@ -32,19 +32,30 @@ private:
     int N;
     
     void initializeSystem();
-    void assembleRegularPoint(int i, int j, int idx);
-    void assembleIrregularPoint(int i, int j, int idx);
     
-    // 应用边界条件（支持混合类型）
-    void applyBoundaryConditions();
+    // 边界条件判断
+    bool isNeumann(const std::string& side) const;
+    bool isDirichlet(const std::string& side) const;
+    bool isDirichletOnPoint(int i, int j) const;
+    bool isNeumannOnPoint(int i, int j) const;
+    bool isCornerPoint(int i, int j) const;
     
     // 获取边界值
     double getBoundaryValue(int i, int j, const std::string& side) const;
+    double getNeumannValue(int i, int j, const std::string& side) const;
     
+    // 组装各种类型的点
+    void assembleDirichletPoint(int i, int j, int idx);
+    void assembleNeumannBoundaryPoint(int i, int j, int idx);
+    void assembleNeumannCornerPoint(int i, int j, int idx);
+    void assembleRegularPoint(int i, int j, int idx);
+    void assembleIrregularPoint(int i, int j, int idx);
+    
+    // 辅助函数
     double findDistanceToHoleBoundary(int i, int j, const std::string& direction);
     
 public:
-    // 构造函数（四个边界分别指定）
+    // 构造函数
     FDDiscretization(const Grid& grid, const TestFunction& test_func,
                      const BoundaryConfig& left, const BoundaryConfig& right,
                      const BoundaryConfig& bottom, const BoundaryConfig& top);

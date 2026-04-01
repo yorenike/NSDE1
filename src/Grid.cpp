@@ -87,8 +87,6 @@ bool Grid::isIrregularPoint(int i, int j) const {
 }
 
 // 生成网格点
-// points[i][j] 中 i 是 y 方向索引（对应 y 坐标），j 是 x 方向索引（对应 x 坐标）
-// 生成网格点（修正版）
 void Grid::generatePoints() {
     // 调整大小：ny+2 行（y方向），每行 nx+2 列（x方向）
     points.resize(ny + 2, std::vector<GridPoint>(nx + 2));
@@ -103,7 +101,7 @@ void Grid::generatePoints() {
             points[i][j].x = x;
             points[i][j].y = y;
             
-            // 判断点类型（初步）
+            // 判断点类型
             if (isBoundaryPoint(i, j)) {
                 points[i][j].type = PointType::BOUNDARY;
             } else if (isInsideHole(x, y)) {
@@ -119,8 +117,7 @@ void Grid::generatePoints() {
     // 不规则点：内部点，不在圆孔内，但至少有一个邻居在圆孔内
     for (int i = 1; i <= ny; i++) {
         for (int j = 1; j <= nx; j++) {
-            // 跳过边界点和圆孔内点
-            if (isBoundaryPoint(i, j)) continue;
+            // 跳过圆孔内点
             if (points[i][j].type == PointType::HOLE) continue;
             
             // 检查是否有邻居是圆孔内点
@@ -138,15 +135,16 @@ void Grid::generatePoints() {
         }
     }
 }
-// 分配全局编号
-// 编号顺序：先固定 y，变化 x（即先遍历 x 方向，再遍历 y 方向）
-// 这样编号与物理直觉一致：相邻的 x 方向点编号连续
+
+// 分配全局编号 - 修改：所有非HOLE点都分配编号
 void Grid::assignGlobalIndices() {
     N = 0;
-    for (int i = 1; i <= ny; i++) {        // i: y方向索引（外层循环）
-        for (int j = 1; j <= nx; j++) {    // j: x方向索引（内层循环）
+    // 遍历所有网格点（包括边界）
+    for (int i = 0; i <= ny + 1; i++) {
+        for (int j = 0; j <= nx + 1; j++) {
             PointType type = points[i][j].type;
-            if (type == PointType::REGULAR || type == PointType::IRREGULAR) {
+            // 只有 HOLE 类型不参与计算
+            if (type != PointType::HOLE) {
                 points[i][j].global_idx = N;
                 idx_map[i][j] = N;
                 N++;
@@ -194,14 +192,15 @@ std::vector<std::pair<int, int>> Grid::getBoundaryPoints() const {
     return boundary_points;
 }
 
-// 获取所有方程离散点（规则点 + 不规则点）
+// 获取所有方程离散点 - 修改：所有非HOLE点
 std::vector<std::pair<int, int>> Grid::getEquationPoints() const {
     std::vector<std::pair<int, int>> eq_points;
     
-    for (int i = 1; i <= ny; i++) {
-        for (int j = 1; j <= nx; j++) {
+    // 遍历所有非 HOLE 的点
+    for (int i = 0; i <= ny + 1; i++) {
+        for (int j = 0; j <= nx + 1; j++) {
             PointType type = points[i][j].type;
-            if (type == PointType::REGULAR || type == PointType::IRREGULAR) {
+            if (type != PointType::HOLE) {
                 eq_points.push_back({i, j});
             }
         }
@@ -240,7 +239,7 @@ std::vector<std::pair<int, int>> Grid::getIrregularPoints() const {
     return irregular_points;
 }
 
-// 打印网格信息
+// 打印网格信息 - 修改：更新统计方式
 void Grid::printGridInfo() const {
     std::cout << "=== Grid Information ===" << std::endl;
     std::cout << "Domain type: " << domain_type << std::endl;
@@ -252,18 +251,31 @@ void Grid::printGridInfo() const {
                   << "), radius=" << hole_r << std::endl;
     }
     
-    std::cout << "\nTotal equation points: " << N << std::endl;
-    std::cout << "  Regular points: " << getRegularPoints().size() << std::endl;
-    std::cout << "  Irregular points: " << getIrregularPoints().size() << std::endl;
-    std::cout << "Boundary points: " << getBoundaryPoints().size() << std::endl;
+    // 重新统计各种类型的点
+    int regular_count = 0, irregular_count = 0, boundary_count = 0, hole_count = 0;
+    for (int i = 0; i <= ny + 1; i++) {
+        for (int j = 0; j <= nx + 1; j++) {
+            switch (points[i][j].type) {
+                case PointType::REGULAR: regular_count++; break;
+                case PointType::IRREGULAR: irregular_count++; break;
+                case PointType::BOUNDARY: boundary_count++; break;
+                case PointType::HOLE: hole_count++; break;
+            }
+        }
+    }
+    
+    std::cout << "\nTotal equation points (non-hole): " << N << std::endl;
+    std::cout << "  Regular points: " << regular_count << std::endl;
+    std::cout << "  Irregular points: " << irregular_count << std::endl;
+    std::cout << "  Boundary points: " << boundary_count << std::endl;
+    std::cout << "Hole points: " << hole_count << std::endl;
     
     // 打印点类型矩阵（用于调试）
-    // 打印时：外层循环 i（y方向，从上到下），内层循环 j（x方向，从左到右）
     std::cout << "\nPoint type matrix (R=Regular, I=Irregular, B=Boundary, H=Hole):" << std::endl;
     std::cout << "y ↑" << std::endl;
-    for (int i = ny + 1; i >= 0; i--) {        // 从上到下打印（y从大到小）
+    for (int i = ny + 1; i >= 0; i--) {
         std::cout << "  ";
-        for (int j = 0; j <= nx + 1; j++) {    // 从左到右打印（x从小到大）
+        for (int j = 0; j <= nx + 1; j++) {
             char c;
             switch (points[i][j].type) {
                 case PointType::REGULAR:   c = 'R'; break;

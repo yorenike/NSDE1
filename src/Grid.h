@@ -26,7 +26,7 @@ class Grid {
 private:
     int nx;                     // x 方向内部点数（不含边界）
     int ny;                     // y 方向内部点数（不含边界）
-    int N;                      // 总方程离散点数（规则点 + 不规则点）
+    int N;                      // 总方程离散点数（所有非HOLE点）
     double hx;                  // x 方向步长
     double hy;                  // y 方向步长
     
@@ -61,6 +61,12 @@ public:
     double getHx() const { return hx; }
     double getHy() const { return hy; }
     
+    // 获取圆孔参数
+    bool hasHole() const { return domain_type == "square_with_hole"; }
+    double getHoleCx() const { return hole_cx; }
+    double getHoleCy() const { return hole_cy; }
+    double getHoleR() const { return hole_r; }
+    
     // 获取点信息：i 是 y 方向索引（0 到 ny+1），j 是 x 方向索引（0 到 nx+1）
     GridPoint getPoint(int i, int j) const;
     double getX(int i, int j) const;  // i: y索引, j: x索引
@@ -71,7 +77,7 @@ public:
     // 获取边界点（用于 Dirichlet 条件）
     std::vector<std::pair<int, int>> getBoundaryPoints() const;
     
-    // 获取所有方程离散点（规则点 + 不规则点）
+    // 获取所有方程离散点（所有非HOLE点）
     std::vector<std::pair<int, int>> getEquationPoints() const;
     
     // 获取规则点
@@ -79,9 +85,6 @@ public:
     
     // 获取不规则点
     std::vector<std::pair<int, int>> getIrregularPoints() const;
-    
-    // 判断点是否在圆孔内
-    bool hasHole() const { return domain_type == "square_with_hole"; }
     
     // 调试：打印网格信息
     void printGridInfo() const;

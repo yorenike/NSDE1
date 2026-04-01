@@ -168,13 +168,12 @@ int main(int argc, char* argv[]) {
         std::vector<double> solution;
         try {
             solution = solveGaussian(fd.getMatrix(), fd.getRHS());
-            fd.setSolution(solution);  // ← 关键：把解设置回 fd 对象
+            fd.setSolution(solution);
         } catch (const std::exception& e) {
             std::cerr << "Solve failed: " << e.what() << std::endl;
             return 1;
         }
         
-        // 现在 computeError 会使用正确的解
         double L1, L2, Linf;
         fd.computeError(L1, L2, Linf);
         
@@ -199,25 +198,9 @@ int main(int argc, char* argv[]) {
 
 
 
+       std::cout << "\n=== My Test ===" << std::endl;
+       fd.printSystem();
 
-
-
-
-
-
-        std::cout << "\n=== Sample Points ===" << std::endl;
-    std::vector<std::pair<int,int>> sample_points = {{10,10}, {20,20}, {30,30}};
-    for (const auto& p : sample_points) {
-        int i = p.first;
-        int j = p.second;
-        if (i >= 1 && i <= ny && j >= 1 && j <= nx) {
-            int idx = grid->getGlobalIdx(i, j);
-            double x = grid->getX(i, j);
-            double y = grid->getY(i, j);
-            std::cout << "(" << i << "," << j << "): x=" << x << ", y=" << y
-                    << ", u=" << solution[idx] << std::endl;
-        }
-    }
 
 
 

@@ -7,8 +7,8 @@
     },
     
     "grid": {
-        "nx": 32,
-        "ny": 32
+        "nx": 20,
+        "ny": 20
     },
     
     "boundary": {
@@ -18,17 +18,17 @@
             "description": "x=0"
         },
         "right": {
-            "type": "dirichlet",
+            "type": "neumann",
             "value": "from_test_function",
             "description": "x=1"
         },
         "bottom": {
-            "type": "dirichlet",
+            "type": "neumann",
             "value": "from_test_function",
             "description": "y=0"
         },
         "top": {
-            "type": "dirichlet",
+            "type": "neumann",
             "value": "from_test_function",
             "description": "y=1"
         }

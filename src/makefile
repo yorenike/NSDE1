@@ -1,6 +1,6 @@
+# 编译器设置
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -O2
-LAPACK_LIBS = -llapack -lblas
 
 # 源文件
 SOURCES = JSONParser.cpp Grid.cpp TestFunction.cpp FDDiscretization.cpp
@@ -8,39 +8,44 @@ OBJECTS = $(SOURCES:.cpp=.o)
 
 # 可执行文件
 TARGET = solver
-CONV_TEST = convergence_test   # 改成 convergence_test
 
 # 默认目标
-all: $(TARGET) $(CONV_TEST)
+all: $(TARGET)
 
 # 主求解器
 $(TARGET): main.o $(OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $@ main.o $(OBJECTS) $(LAPACK_LIBS)
-
-# 收敛性测试
-$(CONV_TEST): convergence_test.o $(OBJECTS)   # 改成 convergence_test.o
-	$(CXX) $(CXXFLAGS) -o $@ convergence_test.o $(OBJECTS) $(LAPACK_LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ main.o $(OBJECTS)
 
 # 编译规则
-%.o: %.cpp JSONParser.h Grid.h TestFunction.h FDDiscretization.h
+main.o: main.cpp JSONParser.h Grid.h TestFunction.h FDDiscretization.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+JSONParser.o: JSONParser.cpp JSONParser.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+Grid.o: Grid.cpp Grid.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+TestFunction.o: TestFunction.cpp TestFunction.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+FDDiscretization.o: FDDiscretization.cpp FDDiscretization.h Grid.h TestFunction.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # 运行主程序
 run: $(TARGET)
 	./$(TARGET) input.json
 
-# 运行收敛性测试
-test: $(CONV_TEST)
-	./$(CONV_TEST)
-
 # 清理
 clean:
-	rm -f *.o $(TARGET) $(CONV_TEST)
+	rm -f *.o $(TARGET)
 
 # 帮助
 help:
 	@echo "Available targets:"
-	@echo "  make          - 编译主程序和测试程序"
+	@echo "  make          - 编译程序"
 	@echo "  make run      - 编译并运行主程序"
-	@echo "  make test     - 编译并运行收敛性测试"
 	@echo "  make clean    - 清理目标文件和可执行文件"
+	@echo "  make help     - 显示帮助信息"
+
+.PHONY: all run clean help
