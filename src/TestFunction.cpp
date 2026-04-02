@@ -188,3 +188,33 @@ double TestFunction::getNeumannBC(double x, double y, const std::string& side) c
     if (side == "top") return du_dn_top(x, y);
     throw std::runtime_error("Unknown side: " + side);
 }
+
+// ========== 获取圆孔边界上的 Neumann 条件 ==========
+double TestFunction::getHoleNeumannBC(double x, double y, double nx, double ny) const {
+    // 根据不同的测试函数计算法向导数
+    if (name == "exp_y_sin_x") {
+        // u = exp(y + sin(x))
+        // ∇u = (u cos x, u)
+        double u = exact(x, y);
+        double cosx = std::cos(x);
+        return u * (cosx * nx + ny);
+    }
+    else if (name == "polynomial") {
+        // u = x(1-x)y(1-y)
+        // u_x = (1-2x)y(1-y)
+        // u_y = x(1-x)(1-2y)
+        double ux = (1.0 - 2.0 * x) * y * (1.0 - y);
+        double uy = x * (1.0 - x) * (1.0 - 2.0 * y);
+        return ux * nx + uy * ny;
+    }
+    else if (name == "trigonometric") {
+        // u = sin(πx) sin(πy)
+        // u_x = π cos(πx) sin(πy)
+        // u_y = π sin(πx) cos(πy)
+        double ux = M_PI * std::cos(M_PI * x) * std::sin(M_PI * y);
+        double uy = M_PI * std::sin(M_PI * x) * std::cos(M_PI * y);
+        return ux * nx + uy * ny;
+    }
+    
+    throw std::runtime_error("Unknown test function for hole Neumann BC: " + name);
+}

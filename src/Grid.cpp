@@ -88,11 +88,9 @@ bool Grid::isIrregularPoint(int i, int j) const {
 
 // 生成网格点
 void Grid::generatePoints() {
-    // 调整大小：ny+2 行（y方向），每行 nx+2 列（x方向）
     points.resize(ny + 2, std::vector<GridPoint>(nx + 2));
     idx_map.resize(ny + 2, std::vector<int>(nx + 2, -1));
     
-    // ========== 阶段1：设置坐标和基本类型 ==========
     for (int i = 0; i <= ny + 1; i++) {
         for (int j = 0; j <= nx + 1; j++) {
             double x = j * hx;
@@ -101,28 +99,42 @@ void Grid::generatePoints() {
             points[i][j].x = x;
             points[i][j].y = y;
             
-            // 判断点类型
-            if (isBoundaryPoint(i, j)) {
+            // 计算到圆心的距离
+            double dx = x - hole_cx;
+            double dy = y - hole_cy;
+            double dist_sq = dx*dx + dy*dy;
+            double r_sq = hole_r * hole_r;
+            
+            // 检查是否在圆孔边界上（允许小误差）
+            bool on_circle_boundary = false;
+            if (domain_type == "square_with_hole") {
+                double eps = 1e-10;
+                on_circle_boundary = std::abs(dist_sq - r_sq) < eps;
+            }
+            
+            if (on_circle_boundary) {
+                // 圆孔边界上的点，设为 BOUNDARY（Dirichlet）
                 points[i][j].type = PointType::BOUNDARY;
-            } else if (isInsideHole(x, y)) {
+            }
+            else if (isBoundaryPoint(i, j)) {
+                points[i][j].type = PointType::BOUNDARY;
+            } 
+            else if (isInsideHole(x, y)) {
                 points[i][j].type = PointType::HOLE;
-            } else {
-                // 其他点先标记为 REGULAR
+            } 
+            else {
                 points[i][j].type = PointType::REGULAR;
             }
         }
     }
     
-    // ========== 阶段2：识别不规则点 ==========
-    // 不规则点：内部点，不在圆孔内，但至少有一个邻居在圆孔内
+    // 识别不规则点（邻居有 HOLE 的点）
     for (int i = 1; i <= ny; i++) {
         for (int j = 1; j <= nx; j++) {
-            // 跳过圆孔内点
             if (points[i][j].type == PointType::HOLE) continue;
+            if (points[i][j].type == PointType::BOUNDARY) continue;
             
-            // 检查是否有邻居是圆孔内点
             bool has_hole_neighbor = false;
-            
             if (points[i-1][j].type == PointType::HOLE) has_hole_neighbor = true;
             if (points[i+1][j].type == PointType::HOLE) has_hole_neighbor = true;
             if (points[i][j-1].type == PointType::HOLE) has_hole_neighbor = true;
@@ -131,7 +143,6 @@ void Grid::generatePoints() {
             if (has_hole_neighbor) {
                 points[i][j].type = PointType::IRREGULAR;
             }
-            // 否则保持为 REGULAR
         }
     }
 }

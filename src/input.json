@@ -1,36 +1,36 @@
 {
     "problem": {
-        "domain_type": "square",
+        "domain_type": "square_with_hole",
         "hole_center_x": 0.5,
         "hole_center_y": 0.5,
-        "hole_radius": 0.25
+        "hole_radius": 0.125
     },
     
     "grid": {
-        "nx": 20,
-        "ny": 20
+        "nx": 60,
+        "ny": 60
     },
     
     "boundary": {
         "left": {
             "type": "dirichlet",
-            "value": "from_test_function",
-            "description": "x=0"
+            "value": "from_test_function"
         },
         "right": {
-            "type": "neumann",
-            "value": "from_test_function",
-            "description": "x=1"
+            "type": "dirichlet",
+            "value": "from_test_function"
         },
         "bottom": {
-            "type": "neumann",
-            "value": "from_test_function",
-            "description": "y=0"
+            "type": "dirichlet",
+            "value": "from_test_function"
         },
         "top": {
+            "type": "dirichlet",
+            "value": "from_test_function"
+        },
+        "hole": {
             "type": "neumann",
-            "value": "from_test_function",
-            "description": "y=1"
+            "value": "from_test_function"
         }
     },
     

@@ -22,7 +22,7 @@ private:
     std::function<double(double, double)> bc_bottom;
     std::function<double(double, double)> bc_top;
     
-    // Neumann 边界条件（法向导数）
+    // Neumann 边界条件（法向导数）用于正方形边界
     std::function<double(double, double)> du_dn_left;
     std::function<double(double, double)> du_dn_right;
     std::function<double(double, double)> du_dn_bottom;
@@ -43,11 +43,14 @@ public:
     // 获取右端项 f = -Δu
     double f(double x, double y) const;
     
-    // 获取 Dirichlet 边界条件值
+    // 获取 Dirichlet 边界条件值（正方形边界）
     double getDirichletBC(double x, double y, const std::string& side) const;
     
-    // 获取 Neumann 边界条件值（法向导数）
+    // 获取 Neumann 边界条件值（正方形边界）
     double getNeumannBC(double x, double y, const std::string& side) const;
+    
+    // 新增：获取圆孔边界上的 Neumann 条件值（给定法线方向）
+    double getHoleNeumannBC(double x, double y, double nx, double ny) const;
     
     // 获取测试函数名称
     std::string getName() const { return name; }

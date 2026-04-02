@@ -23,6 +23,7 @@ private:
     BoundaryConfig bc_right;
     BoundaryConfig bc_bottom;
     BoundaryConfig bc_top;
+    BoundaryConfig bc_hole;   // 新增：圆孔边界条件
     
     // 线性系统
     std::vector<std::vector<double>> A;
@@ -44,6 +45,11 @@ private:
     double getBoundaryValue(int i, int j, const std::string& side) const;
     double getNeumannValue(int i, int j, const std::string& side) const;
     
+    // 新增：获取圆孔边界值
+    double getHoleBoundaryValue(double x, double y) const;
+    bool isHoleDirichlet() const;
+    bool isHoleNeumann() const;
+    
     // 组装各种类型的点
     void assembleDirichletPoint(int i, int j, int idx);
     void assembleNeumannBoundaryPoint(int i, int j, int idx);
@@ -53,12 +59,19 @@ private:
     
     // 辅助函数
     double findDistanceToHoleBoundary(int i, int j, const std::string& direction);
-    
+    double getHoleNeumannValue(double x, double y) const;
+
 public:
-    // 构造函数
+    // 构造函数（6个参数，正方形区域）
     FDDiscretization(const Grid& grid, const TestFunction& test_func,
                      const BoundaryConfig& left, const BoundaryConfig& right,
                      const BoundaryConfig& bottom, const BoundaryConfig& top);
+    
+    // 新增构造函数（7个参数，带圆孔区域）
+    FDDiscretization(const Grid& grid, const TestFunction& test_func,
+                     const BoundaryConfig& left, const BoundaryConfig& right,
+                     const BoundaryConfig& bottom, const BoundaryConfig& top,
+                     const BoundaryConfig& hole);
     
     void assemble();
     void solve();

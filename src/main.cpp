@@ -13,6 +13,15 @@ BoundaryConfig readBoundaryConfig(const JSONParser& config, const std::string& s
     BoundaryConfig bc;
     std::string base_key = "boundary." + side;
     
+    // 检查边界配置是否存在
+    if (!config.hasKey(base_key + ".type")) {
+        // 如果不存在，返回默认的 Dirichlet
+        bc.type = "dirichlet";
+        bc.value = "from_test_function";
+        bc.from_test = true;
+        return bc;
+    }
+    
     bc.type = config.getString(base_key + ".type");
     bc.value = config.getString(base_key + ".value");
     bc.from_test = (bc.value == "from_test_function");
@@ -85,13 +94,15 @@ void saveResults(const std::string& filename, const Grid& grid,
         int j = point.second;
         int idx = grid.getGlobalIdx(i, j);
         
-        double x = grid.getX(i, j);
-        double y = grid.getY(i, j);
-        double u_computed = solution[idx];
-        double u_exact = test_func.exact(x, y);
-        double error = std::abs(u_computed - u_exact);
-        
-        file << x << " " << y << " " << u_computed << " " << u_exact << " " << error << std::endl;
+        if (idx >= 0) {
+            double x = grid.getX(i, j);
+            double y = grid.getY(i, j);
+            double u_computed = solution[idx];
+            double u_exact = test_func.exact(x, y);
+            double error = std::abs(u_computed - u_exact);
+            
+            file << x << " " << y << " " << u_computed << " " << u_exact << " " << error << std::endl;
+        }
     }
     
     file.close();
@@ -117,6 +128,17 @@ int main(int argc, char* argv[]) {
         BoundaryConfig bc_bottom = readBoundaryConfig(config, "bottom");
         BoundaryConfig bc_top = readBoundaryConfig(config, "top");
         
+        // 读取圆孔边界配置（默认 Dirichlet）
+        BoundaryConfig bc_hole;
+        if (domain_type == "square_with_hole") {
+            bc_hole = readBoundaryConfig(config, "hole");
+        } else {
+            // 正方形区域不需要圆孔边界
+            bc_hole.type = "dirichlet";
+            bc_hole.value = "from_test_function";
+            bc_hole.from_test = true;
+        }
+        
         std::string test_name = config.getString("test_function.name");
         bool verbose = config.getBoolOrDefault("output.verbose", false);
         bool save_solution = config.getBoolOrDefault("output.save_solution", false);
@@ -133,6 +155,9 @@ int main(int argc, char* argv[]) {
             std::cout << "  Right:  " << bc_right.type << std::endl;
             std::cout << "  Bottom: " << bc_bottom.type << std::endl;
             std::cout << "  Top:    " << bc_top.type << std::endl;
+            if (domain_type == "square_with_hole") {
+                std::cout << "  Hole:   " << bc_hole.type << std::endl;
+            }
             std::cout << "Test function: " << test_name << std::endl;
         }
         
@@ -156,8 +181,8 @@ int main(int argc, char* argv[]) {
         // 创建测试函数
         TestFunction test_func(test_name);
         
-        // 离散化
-        FDDiscretization fd(*grid, test_func, bc_left, bc_right, bc_bottom, bc_top);
+        // 离散化（传入圆孔边界条件）
+        FDDiscretization fd(*grid, test_func, bc_left, bc_right, bc_bottom, bc_top, bc_hole);
         fd.assemble();
         
         if (verbose) {
@@ -185,6 +210,10 @@ int main(int argc, char* argv[]) {
         
         // 保存结果
         if (save_solution) {
+            // 创建输出目录（如果需要）
+            std::string mkdir_cmd = "mkdir -p " + output_dir;
+            system(mkdir_cmd.c_str());
+            
             std::string filename = output_dir + "/solution_nx" + std::to_string(nx) + ".dat";
             saveResults(filename, *grid, solution, test_func);
         }
@@ -192,19 +221,10 @@ int main(int argc, char* argv[]) {
         delete grid;
         
         std::cout << "\n✓ Solver completed successfully!" << std::endl;
-
-
-
-
-
-
-       std::cout << "\n=== My Test ===" << std::endl;
-       fd.printSystem();
-
-
-
-
         
+        std::cout << "\n=== My Test ===" << std::endl;
+        fd.printSystem();
+   
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
