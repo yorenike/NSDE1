@@ -3,11 +3,12 @@
         "domain_type": "square_with_hole",
         "hole_center_x": 0.5,
         "hole_center_y": 0.5,
-        "hole_radius": 0.25
+        "hole_radius": 0.125
     },
     
     "grid": {
-        "n": 32
+        "nx": 30,
+        "ny": 30
     },
     
     "boundary": {
@@ -16,11 +17,11 @@
             "value": "from_test_function"
         },
         "right": {
-            "type": "neumann",
+            "type": "dirichlet",
             "value": "from_test_function"
         },
         "bottom": {
-            "type": "neumann",
+            "type": "dirichlet",
             "value": "from_test_function"
         },
         "top": {
@@ -38,8 +39,8 @@
     },
     
     "output": {
-        "verbose": false,
-        "save_solution": false,
+        "verbose": true,
+        "save_solution": true,
         "output_dir": "./results"
     }
 }

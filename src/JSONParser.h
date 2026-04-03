@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include "BoundaryConfig.h"
 
 class JSONParser {
 private:
@@ -26,7 +27,10 @@ public:
     int getInt(const std::string& key) const;
     double getDouble(const std::string& key) const;
     bool getBool(const std::string& key) const;
-    
+
+    // 读取边界配置
+    BoundaryConfig readBoundaryConfig(const std::string& side) const;
+
     // 检查键是否存在
     bool hasKey(const std::string& key) const;
     

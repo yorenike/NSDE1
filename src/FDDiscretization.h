@@ -5,13 +5,7 @@
 #include <string>
 #include "Grid.h"
 #include "TestFunction.h"
-
-// 边界条件结构体
-struct BoundaryConfig {
-    std::string type;      // "dirichlet" 或 "neumann"
-    std::string value;     // 表达式或 "from_test_function"
-    bool from_test;        // 是否从测试函数获取
-};
+#include "BoundaryConfig.h"
 
 class FDDiscretization {
 private:
@@ -74,7 +68,6 @@ public:
                      const BoundaryConfig& hole);
     
     void assemble();
-    void solve();
     
     const std::vector<double>& getSolution() const { return U; }
     const std::vector<std::vector<double>>& getMatrix() const { return A; }

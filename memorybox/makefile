@@ -3,7 +3,7 @@ CXX = g++
 CXXFLAGS = -std=c++11 -Wall -O2
 
 # 源文件
-SOURCES = JSONParser.cpp Grid.cpp TestFunction.cpp FDDiscretization.cpp
+SOURCES = JSONParser.cpp Grid.cpp TestFunction.cpp FDDiscretization.cpp LinearSolver.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 # 可执行文件
@@ -30,6 +30,9 @@ TestFunction.o: TestFunction.cpp TestFunction.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 FDDiscretization.o: FDDiscretization.cpp FDDiscretization.h Grid.h TestFunction.h
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+	
+LinearSolver.o: LinearSolver.cpp LinearSolver.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # 运行主程序

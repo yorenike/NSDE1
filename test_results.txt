@@ -1,0 +1,15 @@
+
+Testing: Group1: Square, All Dirichlet, exp_y_sin_x, n=8
+L1 norm: 1.794137e-04, L2 norm: 2.247457e-04, L∞ norm: 4.333300e-04
+
+Testing: Group1: Square, All Dirichlet, exp_y_sin_x, n=16
+L1 norm: 5.131381e-05, L2 norm: 6.320657e-05, L∞ norm: 1.217395e-04
+
+Testing: Group1: Square, All Dirichlet, exp_y_sin_x, n=32
+L1 norm: 1.369659e-05, L2 norm: 1.678965e-05, L∞ norm: 3.242503e-05
+
+Testing: Group1: Square, All Dirichlet, exp_y_sin_x, n=64
+5e-05, L∞ norm: 3.242503e-05
+
+Group1: Square, All Dirichlet
+  Test function: exp_y_sin_x, Grid: 64 x 64

@@ -1,0 +1,267 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{geometry}
+\usepackage{float}
+\geometry{a4paper, margin=1.5cm}
+
+\title{Numerical Solution of Poisson Equation with Finite Difference Method}
+\author{Zhang Zihao}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This report presents the implementation of a finite difference solver for the Poisson equation in two dimensions. The solver supports both square domains and square domains with a circular hole, various boundary conditions, and multiple test functions.
+
+\section{Solver Structure}
+
+The program consists of an \texttt{input.json} configuration file, a \texttt{src} folder containing the source code, and a \texttt{Makefile} for compilation and execution.
+
+\subsection{User Interface}
+The \texttt{input.json} file allows users to configure:
+\begin{itemize}
+    \item Boundary conditions on the square boundary (Dirichlet/Neumann)
+    \item Grid size
+    \item Test function (\texttt{exp\_y\_sin\_x}, \texttt{polynomial}, \texttt{trigonometric})
+    \item Domain type (\texttt{square} or \texttt{square\_with\_hole})
+    \item Hole parameters (center coordinates, radius, boundary conditions)
+    \item Output options (verbose mode, result saving)
+\end{itemize}
+
+\subsection{Build System}
+The \texttt{Makefile} provides the following functionalities:
+\begin{itemize}
+    \item \texttt{make}: Compiles the program
+    \item \texttt{make run}: Compiles and runs the program
+    \item \texttt{make clean}: Removes object files and executable
+    \item \texttt{make cleanall}: Removes all generated files including results
+\end{itemize}
+
+\subsection{Source Code Modules}
+The \texttt{src} folder contains the following components:
+\begin{itemize}
+    \item \texttt{main.cpp}: Main program entry point
+    \item \texttt{JSONParser}: Reads configuration from \texttt{input.json}
+    \item \texttt{Grid}: Generates grid, assigns indices, classifies points (regular, irregular, boundary, hole)
+    \item \texttt{FDDiscretization}: Assembles the linear system \(A\mathbf{U} = \mathbf{F}\)
+    \item \texttt{TestFunction}: Provides test functions and their derivatives
+    \item \texttt{LinearSolver}: Solves linear systems (Gaussian elimination)
+    \item \texttt{BoundaryConfig}: Stores boundary condition configurations
+\end{itemize}
+
+\subsection{Test Functions}
+Three test functions are implemented:
+\begin{enumerate}
+    \item \(u(x,y) = \exp(y + \sin x)\) (exponential)
+    \item \(u(x,y) = x(1-x)y(1-y)\) (polynomial)
+    \item \(u(x,y) = \sin(\pi x)\sin(\pi y)\) (trigonometric)
+\end{enumerate}
+Users can select any of these functions in the configuration file.
+
+\subsection{Automated Testing}
+A Python script \texttt{run\_tests.py} is provided to automatically run multiple test configurations. Results can be saved using:
+\begin{verbatim}
+python3 run_tests.py > test_results.txt
+\end{verbatim}
+
+\section{Numerical Methods}
+
+\subsection{Regular Points}
+For regular points, the standard five-point stencil is used:
+\[
+-\frac{U_{i-1,j} - 2U_{i,j} + U_{i+1,j}}{h^2} - \frac{U_{i,j-1} - 2U_{i,j} + U_{i,j+1}}{h^2} = f_{i,j}
+\]
+The local truncation error is \(O(h^2)\).
+
+\subsection{Square Boundary Conditions}
+\begin{itemize}
+    \item \textbf{Dirichlet}: The boundary value is prescribed directly: \(U = g\), with \(O(h^2)\) accuracy.
+    \item \textbf{Neumann}: The ghost point method is employed, achieving \(O(h^2)\) accuracy.
+\end{itemize}
+
+\subsection{Hole Boundary Conditions}
+\begin{itemize}
+    \item \textbf{Dirichlet}: The irregular point formula from the textbook is used, with local truncation error \(O(h)\).
+    \item \textbf{Neumann}: For irregular points, the point is connected to the circle center to obtain the normal direction. The directional derivative is discretized using grid points, and an equation is formed based on the angle with the normal direction. This method yields \(O(h)\) accuracy.
+\end{itemize}
+
+\section{Numerical Results}
+
+All tests were performed using the representative test function \(u(x,y) = \exp(y + \sin x)\). Results are presented for seven different configurations. Note that pure Neumann conditions on the square boundary are not tested because the resulting linear system is singular (solution is not unique). In such cases, a Dirichlet condition must be imposed at some point to obtain a unique solution.
+
+\subsection{Group 1: Square Domain, All Dirichlet}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with all Dirichlet conditions}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 1.794e-04 & --- & 2.247e-04 & --- & 4.333e-04 & --- \\
+16 & 0.0588 & 5.131e-05 & 1.81 & 6.321e-05 & 1.83 & 1.217e-04 & 1.83 \\
+32 & 0.0303 & 1.370e-05 & 1.91 & 1.679e-05 & 1.91 & 3.243e-05 & 1.91 \\
+64 & 0.0154 & 3.536e-06 & 1.95 & 4.329e-06 & 1.96 & 8.361e-06 & 1.96 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 2: Square Domain, Mixed Boundary}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with mixed boundary conditions}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 1.142e-03 & --- & 1.566e-03 & --- & 4.138e-03 & --- \\
+16 & 0.0588 & 2.995e-04 & 1.93 & 4.145e-04 & 1.92 & 1.164e-03 & 1.83 \\
+32 & 0.0303 & 7.616e-05 & 1.98 & 1.062e-04 & 1.96 & 3.099e-04 & 1.91 \\
+64 & 0.0154 & 1.917e-05 & 1.99 & 2.686e-05 & 1.98 & 7.992e-05 & 1.96 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 3: With Hole, All Dirichlet}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with hole (all Dirichlet)}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 4.842e-05 & --- & 8.449e-05 & --- & 3.344e-04 & --- \\
+16 & 0.0588 & 9.095e-06 & 2.41 & 1.316e-05 & 2.68 & 5.814e-05 & 2.52 \\
+32 & 0.0303 & 2.116e-06 & 2.10 & 2.848e-06 & 2.21 & 8.503e-06 & 2.77 \\
+64 & 0.0154 & 4.996e-07 & 2.08 & 6.914e-07 & 2.04 & 1.913e-06 & 2.15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 4: With Hole, Square Dirichlet, Hole Neumann}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with hole (hole Neumann)}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 6.319e-03 & --- & 1.188e-02 & --- & 6.176e-02 & --- \\
+16 & 0.0588 & 3.131e-03 & 1.01 & 4.981e-03 & 1.26 & 1.838e-02 & 1.75 \\
+32 & 0.0303 & 1.257e-03 & 1.32 & 2.017e-03 & 1.30 & 8.321e-03 & 1.14 \\
+64 & 0.0154 & 6.657e-04 & 0.92 & 1.051e-03 & 0.94 & 4.222e-03 & 0.98 \\
+96 & 0.0103 & 3.883e-04 & 0.96 & 6.209e-04 & 0.96 & 2.630e-03 & 0.89 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 5: With Hole, Square Neumann, Hole Dirichlet}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with hole (square Neumann, hole Dirichlet)}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 1.573e-03 & --- & 2.056e-03 & --- & 5.109e-03 & --- \\
+16 & 0.0588 & 3.820e-04 & 2.04 & 5.264e-04 & 1.97 & 1.461e-03 & 1.81 \\
+32 & 0.0303 & 9.224e-05 & 2.05 & 1.311e-04 & 2.00 & 3.895e-04 & 1.91 \\
+64 & 0.0154 & 2.271e-05 & 2.02 & 3.280e-05 & 2.00 & 1.010e-04 & 1.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 6: With Hole, Square Mixed, Hole Dirichlet}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with hole (square mixed, hole Dirichlet)}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 4.809e-04 & --- & 8.193e-04 & --- & 2.590e-03 & --- \\
+16 & 0.0588 & 1.219e-04 & 1.98 & 2.130e-04 & 1.94 & 7.476e-04 & 1.79 \\
+32 & 0.0303 & 3.007e-05 & 2.02 & 5.353e-05 & 1.99 & 2.005e-04 & 1.90 \\
+64 & 0.0154 & 7.473e-06 & 2.01 & 1.340e-05 & 2.00 & 5.194e-05 & 1.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Group 7: With Hole, Square Mixed, Hole Neumann}
+
+\begin{table}[H]
+\centering
+\caption{Error norms and convergence rates for square domain with hole (square mixed, hole Neumann)}
+\begin{tabular}{cccccccc}
+\toprule
+$n$ & $h$ & \multicolumn{2}{c}{$L_1$ error} & \multicolumn{2}{c}{$L_2$ error} & \multicolumn{2}{c}{$L_\infty$ error} \\
+\cmidrule(r){3-4} \cmidrule(r){5-6} \cmidrule(r){7-8}
+& & value & order & value & order & value & order \\
+\midrule
+8  & 0.1111 & 1.152e-02 & --- & 1.727e-02 & --- & 6.068e-02 & --- \\
+16 & 0.0588 & 8.930e-03 & 0.37 & 1.184e-02 & 0.54 & 3.321e-02 & 0.87 \\
+32 & 0.0303 & 3.369e-03 & 1.41 & 4.582e-03 & 1.37 & 1.373e-02 & 1.27 \\
+64 & 0.0154 & 1.771e-03 & 0.93 & 2.391e-03 & 0.94 & 7.061e-03 & 0.96 \\
+96 & 0.0103 & 1.414e-03 & 0.85 & 1.972e-03 & 0.83 & 4.860e-03 & 1.09 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+\subsection{Convergence Analysis}
+
+\begin{itemize}
+    \item \textbf{Groups 1-3 (Dirichlet conditions)}: The convergence rates approach 2.0, confirming second-order accuracy. For the hole with Dirichlet condition (Group 3), although irregular points have only first-order accuracy (\(O(h)\)), the overall convergence remains second-order. This aligns with Theorem 10.68 in the textbook, where a discrete maximum principle is employed to control error propagation.
+    
+    \item \textbf{Groups 4 and 7 (hole Neumann)}: The convergence rates are approximately first-order (0.8-1.1). For Group 4, the additional test at \(n=96\) gives orders of 0.96, 0.96, and 0.89 for L1, L2, and L∞ respectively. For Group 7, the orders at \(n=96\) are 0.85, 0.83, and 1.09. This confirms that Neumann conditions on the hole result in first-order convergence overall, regardless of the square boundary conditions.
+    
+    \item \textbf{Groups 5 and 6 (hole Dirichlet with various square boundaries)}: These cases maintain second-order convergence, demonstrating the robustness of the Dirichlet treatment for the hole.
+\end{itemize}
+
+\subsection{Pure Neumann on Square Boundary}
+Pure Neumann conditions on the square boundary are not tested because the resulting linear system is singular (the solution is not unique). In such cases, a Dirichlet condition must be imposed at some point to obtain a unique solution. This is a well-known property of Neumann problems.
+
+\subsection{Computational Performance}
+Using Gaussian elimination for solving the linear system becomes noticeably time-consuming at \(64 \times 64\) grid resolution. This observation motivates the exploration of more efficient methods, serving as a natural transition to the study of multigrid methods.
+
+\subsection{Theoretical Validation}
+The numerical results validate several key theoretical conclusions:
+\begin{itemize}
+    \item Regular points achieve second-order accuracy (\(O(h^2)\))
+    \item Irregular points exhibit first-order accuracy (\(O(h)\))
+    \item For Dirichlet conditions on the hole, the overall convergence remains second-order despite first-order irregular points (Theorem 10.68)
+    \item Neumann conditions on the hole result in first-order convergence due to error propagation
+    \item Pure Neumann problems have non-unique solutions (singular matrix)
+\end{itemize}
+
+\section{Conclusion}
+A finite difference solver for the two-dimensional Poisson equation has been successfully implemented and tested. The solver supports both square domains and domains with a circular hole, various boundary conditions, and multiple test functions. Numerical experiments confirm the theoretical convergence rates: second-order for Dirichlet-dominated cases and first-order for cases with Neumann conditions on the hole. The results demonstrate the effectiveness of the finite difference method and provide a foundation for further studies of more advanced numerical techniques such as multigrid methods.
+
+\end{document}

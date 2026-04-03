@@ -82,6 +82,22 @@ bool FDDiscretization::isNeumannOnPoint(int i, int j) const {
     if (j == 0) is_neumann = is_neumann || isNeumann("left");
     if (j == grid.getNx() + 1) is_neumann = is_neumann || isNeumann("right");
     
+    // 圆孔边界
+    if (grid.hasHole() && isHoleNeumann()) {
+        double x = grid.getX(i, j);
+        double y = grid.getY(i, j);
+        double cx = grid.getHoleCx();
+        double cy = grid.getHoleCy();
+        double r = grid.getHoleR();
+        double dx = x - cx;
+        double dy = y - cy;
+        double dist_sq = dx*dx + dy*dy;
+        double eps = 1e-10;
+        if (std::abs(dist_sq - r*r) < eps) {
+            is_neumann = true;
+        }
+    }
+    
     return is_neumann;
 }
 
@@ -127,10 +143,7 @@ double FDDiscretization::getNeumannValue(int i, int j, const std::string& side) 
 
 void FDDiscretization::assemble() {
     initializeSystem();
-    
-    double h = grid.getHx();
-    double h2 = h * h;
-    
+       
     for (int i = 0; i <= grid.getNy() + 1; i++) {
         for (int j = 0; j <= grid.getNx() + 1; j++) {
             int idx = grid.getGlobalIdx(i, j);
@@ -614,7 +627,6 @@ double FDDiscretization::getHoleNeumannValue(double x, double y) const {
     // 从 Grid 获取圆孔参数
     double cx = grid.getHoleCx();
     double cy = grid.getHoleCy();
-    double r = grid.getHoleR();
     
     // 计算从圆心到 P 的方向（法线方向）
     double dx = x - cx;
@@ -646,49 +658,6 @@ bool FDDiscretization::isHoleNeumann() const {
     return bc_hole.type == "neumann";
 }
 
-void FDDiscretization::solve() {
-    if (N == 0) return;
-    
-    std::vector<std::vector<double>> augmented(N, std::vector<double>(N + 1));
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            augmented[i][j] = A[i][j];
-        }
-        augmented[i][N] = F[i];
-    }
-    
-    for (int k = 0; k < N; k++) {
-        int max_row = k;
-        for (int i = k + 1; i < N; i++) {
-            if (std::abs(augmented[i][k]) > std::abs(augmented[max_row][k])) {
-                max_row = i;
-            }
-        }
-        
-        if (std::abs(augmented[max_row][k]) < 1e-12) {
-            throw std::runtime_error("Singular matrix");
-        }
-        
-        std::swap(augmented[k], augmented[max_row]);
-        
-        for (int i = k + 1; i < N; i++) {
-            double factor = augmented[i][k] / augmented[k][k];
-            for (int j = k; j <= N; j++) {
-                augmented[i][j] -= factor * augmented[k][j];
-            }
-        }
-    }
-    
-    U.resize(N);
-    for (int i = N - 1; i >= 0; i--) {
-        U[i] = augmented[i][N];
-        for (int j = i + 1; j < N; j++) {
-            U[i] -= augmented[i][j] * U[j];
-        }
-        U[i] /= augmented[i][i];
-    }
-}
-
 void FDDiscretization::printSystem() const {
     std::cout << "Linear System A U = F (N = " << N << "):" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
@@ -707,12 +676,6 @@ void FDDiscretization::computeError(double& L1, double& L2, double& Linf) const 
     L2 = 0.0;
     Linf = 0.0;
     
-    // 分类统计变量
-    double L1_regular = 0.0, L1_irregular = 0.0, L1_boundary = 0.0;
-    double L2_regular = 0.0, L2_irregular = 0.0, L2_boundary = 0.0;
-    double Linf_regular = 0.0, Linf_irregular = 0.0, Linf_boundary = 0.0;
-    int count_regular = 0, count_irregular = 0, count_boundary = 0;
-    
     auto eq_points = grid.getEquationPoints();
     double hx = grid.getHx();
     double hy = grid.getHy();
@@ -729,57 +692,11 @@ void FDDiscretization::computeError(double& L1, double& L2, double& Linf) const 
             double exact_val = test_func.exact(x, y);
             double error = std::abs(U[idx] - exact_val);
             
-            // 总体误差
             L1 += error * area;
             L2 += error * error * area;
             Linf = std::max(Linf, error);
-            
-            // 根据点类型分类统计
-            PointType type = grid.getPointType(i, j);
-            if (type == PointType::REGULAR) {
-                L1_regular += error * area;
-                L2_regular += error * error * area;
-                Linf_regular = std::max(Linf_regular, error);
-                count_regular++;
-            } else if (type == PointType::IRREGULAR) {
-                L1_irregular += error * area;
-                L2_irregular += error * error * area;
-                Linf_irregular = std::max(Linf_irregular, error);
-                count_irregular++;
-            } else if (type == PointType::BOUNDARY) {
-                L1_boundary += error * area;
-                L2_boundary += error * error * area;
-                Linf_boundary = std::max(Linf_boundary, error);
-                count_boundary++;
-            }
         }
     }
     
     L2 = std::sqrt(L2);
-    
-    // 计算分类的 L2
-    L2_regular = std::sqrt(L2_regular);
-    L2_irregular = std::sqrt(L2_irregular);
-    L2_boundary = std::sqrt(L2_boundary);
-    
-    // 打印分类统计结果
-    std::cout << "\n=== Detailed Error Analysis ===" << std::endl;
-    std::cout << "Total points: " << eq_points.size() << std::endl;
-    std::cout << "  Regular points:   " << count_regular 
-              << " (L1=" << L1_regular << ", L2=" << L2_regular << ", Linf=" << Linf_regular << ")" << std::endl;
-    std::cout << "  Irregular points: " << count_irregular 
-              << " (L1=" << L1_irregular << ", L2=" << L2_irregular << ", Linf=" << Linf_irregular << ")" << std::endl;
-    std::cout << "  Boundary points:  " << count_boundary 
-              << " (L1=" << L1_boundary << ", L2=" << L2_boundary << ", Linf=" << Linf_boundary << ")" << std::endl;
-    
-    // 计算平均误差（每个点）
-    if (count_regular > 0) {
-        std::cout << "  Average regular error: " << (L1_regular / area / count_regular) << std::endl;
-    }
-    if (count_irregular > 0) {
-        std::cout << "  Average irregular error: " << (L1_irregular / area / count_irregular) << std::endl;
-    }
-    if (count_boundary > 0) {
-        std::cout << "  Average boundary error: " << (L1_boundary / area / count_boundary) << std::endl;
-    }
 }

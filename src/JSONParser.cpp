@@ -223,6 +223,24 @@ bool JSONParser::getBoolOrDefault(const std::string& key, bool default_value) co
     return default_value;
 }
 
+BoundaryConfig JSONParser::readBoundaryConfig(const std::string& side) const {
+    BoundaryConfig bc;
+    std::string base_key = "boundary." + side;
+    
+    if (!hasKey(base_key + ".type")) {
+        bc.type = "dirichlet";
+        bc.value = "from_test_function";
+        bc.from_test = true;
+        return bc;
+    }
+    
+    bc.type = getString(base_key + ".type");
+    bc.value = getString(base_key + ".value");
+    bc.from_test = (bc.value == "from_test_function");
+    
+    return bc;
+}
+
 // 打印所有解析的数据
 void JSONParser::printAll() const {
     std::cout << "=== Parsed JSON Data ===" << std::endl;

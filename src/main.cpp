@@ -3,79 +3,12 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include "LinearSolver.h"
 #include "JSONParser.h"
 #include "Grid.h"
 #include "TestFunction.h"
 #include "FDDiscretization.h"
-
-// 从 JSON 读取边界配置
-BoundaryConfig readBoundaryConfig(const JSONParser& config, const std::string& side) {
-    BoundaryConfig bc;
-    std::string base_key = "boundary." + side;
-    
-    // 检查边界配置是否存在
-    if (!config.hasKey(base_key + ".type")) {
-        // 如果不存在，返回默认的 Dirichlet
-        bc.type = "dirichlet";
-        bc.value = "from_test_function";
-        bc.from_test = true;
-        return bc;
-    }
-    
-    bc.type = config.getString(base_key + ".type");
-    bc.value = config.getString(base_key + ".value");
-    bc.from_test = (bc.value == "from_test_function");
-    
-    return bc;
-}
-
-// 高斯消元法
-std::vector<double> solveGaussian(const std::vector<std::vector<double>>& A, 
-                                   const std::vector<double>& F) {
-    int n = A.size();
-    if (n == 0) return std::vector<double>();
-    
-    std::vector<std::vector<double>> augmented(n, std::vector<double>(n + 1));
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            augmented[i][j] = A[i][j];
-        }
-        augmented[i][n] = F[i];
-    }
-    
-    for (int k = 0; k < n; k++) {
-        int max_row = k;
-        for (int i = k + 1; i < n; i++) {
-            if (std::abs(augmented[i][k]) > std::abs(augmented[max_row][k])) {
-                max_row = i;
-            }
-        }
-        
-        if (std::abs(augmented[max_row][k]) < 1e-12) {
-            throw std::runtime_error("Singular matrix");
-        }
-        
-        std::swap(augmented[k], augmented[max_row]);
-        
-        for (int i = k + 1; i < n; i++) {
-            double factor = augmented[i][k] / augmented[k][k];
-            for (int j = k; j <= n; j++) {
-                augmented[i][j] -= factor * augmented[k][j];
-            }
-        }
-    }
-    
-    std::vector<double> U(n);
-    for (int i = n - 1; i >= 0; i--) {
-        U[i] = augmented[i][n];
-        for (int j = i + 1; j < n; j++) {
-            U[i] -= augmented[i][j] * U[j];
-        }
-        U[i] /= augmented[i][i];
-    }
-    
-    return U;
-}
+#include "BoundaryConfig.h"
 
 void saveResults(const std::string& filename, const Grid& grid, 
                  const std::vector<double>& solution, const TestFunction& test_func) {
@@ -119,21 +52,18 @@ int main(int argc, char* argv[]) {
         JSONParser config(argv[1]);
         
         std::string domain_type = config.getString("problem.domain_type");
-        int nx = config.getInt("grid.nx");
-        int ny = config.getInt("grid.ny");
+        int nx = config.getInt("grid.n");
+        int ny = nx;
         
-        // 读取四个边界的配置
-        BoundaryConfig bc_left = readBoundaryConfig(config, "left");
-        BoundaryConfig bc_right = readBoundaryConfig(config, "right");
-        BoundaryConfig bc_bottom = readBoundaryConfig(config, "bottom");
-        BoundaryConfig bc_top = readBoundaryConfig(config, "top");
-        
-        // 读取圆孔边界配置（默认 Dirichlet）
+        // 读取边界的配置
+        BoundaryConfig bc_left = config.readBoundaryConfig("left");
+        BoundaryConfig bc_right = config.readBoundaryConfig("right");
+        BoundaryConfig bc_bottom = config.readBoundaryConfig("bottom");
+        BoundaryConfig bc_top = config.readBoundaryConfig("top");
         BoundaryConfig bc_hole;
         if (domain_type == "square_with_hole") {
-            bc_hole = readBoundaryConfig(config, "hole");
+            bc_hole = config.readBoundaryConfig("hole");
         } else {
-            // 正方形区域不需要圆孔边界
             bc_hole.type = "dirichlet";
             bc_hole.value = "from_test_function";
             bc_hole.from_test = true;
@@ -192,7 +122,7 @@ int main(int argc, char* argv[]) {
         // 求解
         std::vector<double> solution;
         try {
-            solution = solveGaussian(fd.getMatrix(), fd.getRHS());
+            solution = LinearSolver::gaussianElimination(fd.getMatrix(), fd.getRHS());
             fd.setSolution(solution);
         } catch (const std::exception& e) {
             std::cerr << "Solve failed: " << e.what() << std::endl;
@@ -210,10 +140,12 @@ int main(int argc, char* argv[]) {
         
         // 保存结果
         if (save_solution) {
-            // 创建输出目录（如果需要）
             std::string mkdir_cmd = "mkdir -p " + output_dir;
-            system(mkdir_cmd.c_str());
-            
+            int ret = system(mkdir_cmd.c_str());
+            if (ret != 0) {
+                std::cerr << "Warning: Could not create directory " << output_dir << std::endl;
+            }
+    
             std::string filename = output_dir + "/solution_nx" + std::to_string(nx) + ".dat";
             saveResults(filename, *grid, solution, test_func);
         }
@@ -222,8 +154,8 @@ int main(int argc, char* argv[]) {
         
         std::cout << "\n✓ Solver completed successfully!" << std::endl;
         
-        std::cout << "\n=== My Test ===" << std::endl;
-        fd.printSystem();
+        /*std::cout << "\n=== My Test ===" << std::endl;
+        fd.printSystem();*/
    
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

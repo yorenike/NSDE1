@@ -40,6 +40,7 @@ private:
     std::vector<std::vector<int>> idx_map;       // -1 表示不是方程离散点
     
     // 辅助函数
+    bool validateHoleParameters() const;
     bool isInsideHole(double x, double y) const;
     bool isBoundaryPoint(int i, int j) const;    // i: y索引, j: x索引
     bool isRegularPoint(int i, int j) const;

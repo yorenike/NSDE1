@@ -1,16 +1,13 @@
 {
     "problem": {
-        "domain_type": "square_with_hole",
+        "domain_type": "square",
         "hole_center_x": 0.5,
         "hole_center_y": 0.5,
-        "hole_radius": 0.125
+        "hole_radius": 0.25
     },
-    
     "grid": {
-        "nx": 60,
-        "ny": 60
+        "n": 64
     },
-    
     "boundary": {
         "left": {
             "type": "dirichlet",
@@ -27,20 +24,14 @@
         "top": {
             "type": "dirichlet",
             "value": "from_test_function"
-        },
-        "hole": {
-            "type": "neumann",
-            "value": "from_test_function"
         }
     },
-    
     "test_function": {
         "name": "exp_y_sin_x"
     },
-    
     "output": {
-        "verbose": true,
-        "save_solution": true,
+        "verbose": false,
+        "save_solution": false,
         "output_dir": "./results"
     }
 }

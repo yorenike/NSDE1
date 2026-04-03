@@ -27,6 +27,10 @@ Grid::Grid(int nx_, int ny_, double hole_cx_, double hole_cy_, double hole_r_)
     // 计算步长
     hx = 1.0 / (nx + 1);
     hy = 1.0 / (ny + 1);
+
+    if (!validateHoleParameters()) {
+        throw std::runtime_error("Invalid hole parameters");
+    }
     
     // 生成网格点
     generatePoints();
@@ -248,6 +252,36 @@ std::vector<std::pair<int, int>> Grid::getIrregularPoints() const {
     }
     
     return irregular_points;
+}
+
+bool Grid::validateHoleParameters() const {
+    // 条件1：圆盘必须覆盖至少 4 个方程离散点
+    double area_hole = M_PI * hole_r * hole_r;
+    double area_cell = hx * hy;
+    int min_points = 4;
+    
+    if (area_hole < min_points * area_cell) {
+        std::cerr << "Error: Hole radius too small!" << std::endl;
+        std::cerr << "  Required: at least " << min_points << " grid points inside hole" << std::endl;
+        std::cerr << "  Minimum radius: " << std::sqrt(min_points * area_cell / M_PI) << std::endl;
+        return false;
+    }
+    
+    // 条件2：圆盘不能与正方形边界相交
+    double eps = 1e-10;
+    if (hole_cx - hole_r < -eps || hole_cx + hole_r > 1.0 + eps ||
+        hole_cy - hole_r < -eps || hole_cy + hole_r > 1.0 + eps) {
+        std::cerr << "Error: Hole intersects with square boundary!" << std::endl;
+        return false;
+    }
+    
+    // 条件3：圆心必须在正方形内部
+    if (hole_cx < 0 || hole_cx > 1 || hole_cy < 0 || hole_cy > 1) {
+        std::cerr << "Error: Hole center must be inside the square!" << std::endl;
+        return false;
+    }
+    
+    return true;
 }
 
 // 打印网格信息 - 修改：更新统计方式
