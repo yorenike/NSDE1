@@ -1,6 +1,6 @@
 {
     "problem": {
-        "domain_type": "square_with_hole",
+        "domain_type": "square",
         "hole_center_x": 0.5,
         "hole_center_y": 0.5,
         "hole_radius": 0.25
@@ -16,11 +16,11 @@
             "value": "from_test_function"
         },
         "right": {
-            "type": "neumann",
+            "type": "dirichlet",
             "value": "from_test_function"
         },
         "bottom": {
-            "type": "neumann",
+            "type": "dirichlet",
             "value": "from_test_function"
         },
         "top": {
@@ -34,11 +34,11 @@
     },
     
     "test_function": {
-        "name": "exp_y_sin_x"
+        "name": "trigonometric"
     },
     
     "output": {
-        "verbose": false,
+        "verbose": true,
         "save_solution": false,
         "output_dir": "./results"
     }

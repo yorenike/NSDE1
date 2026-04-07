@@ -59,19 +59,29 @@ void TestFunction::initExpYSinX() {
 void TestFunction::initPolynomial() {
     name = "polynomial";
     
-    // 解析解
+    // 解析解: u = x^2 (1-x)^2 y^2 (1-y)^2
     u_func = [](double x, double y) {
-        return x * (1.0 - x) * y * (1.0 - y);
+        double A = x * x * (1.0 - x) * (1.0 - x);
+        double B = y * y * (1.0 - y) * (1.0 - y);
+        return A * B;
     };
     
     // 右端项 f = -Δu
-    // u = (x - x^2)(y - y^2)
-    // u_xx = -2 * (y - y^2)
-    // u_yy = -2 * (x - x^2)
-    // Δu = -2(y - y^2) - 2(x - x^2) = -2(x + y - x^2 - y^2)
-    // f = -Δu = 2(x + y - x^2 - y^2)
+    // u = A(x) * B(y)
+    // 其中 A(x) = x^2(1-x)^2 = x^2 - 2x^3 + x^4
+    //      B(y) = y^2(1-y)^2 = y^2 - 2y^3 + y^4
+    // A'(x) = 2x - 6x^2 + 4x^3
+    // A''(x) = 2 - 12x + 12x^2
+    // B'(y) = 2y - 6y^2 + 4y^3
+    // B''(y) = 2 - 12y + 12y^2
+    // Δu = A''(x) B(y) + A(x) B''(y)
+    // f = -Δu = -[A''(x) B(y) + A(x) B''(y)]
     f_func = [](double x, double y) {
-        return 2.0 * (x + y - x*x - y*y);
+        double A = x*x - 2.0*x*x*x + x*x*x*x;
+        double App = 2.0 - 12.0*x + 12.0*x*x;
+        double B = y*y - 2.0*y*y*y + y*y*y*y;
+        double Bpp = 2.0 - 12.0*y + 12.0*y*y;
+        return -(App * B + A * Bpp);
     };
     
     // Dirichlet 边界条件：在边界上 u=0
@@ -81,24 +91,27 @@ void TestFunction::initPolynomial() {
     bc_top = [](double x, double y) { return 0.0; };
     
     // Neumann 边界条件（法向导数）
-    // u = x(1-x)y(1-y)
-    // u_x = (1-2x)y(1-y)
-    // u_y = x(1-x)(1-2y)
+    // u_x = A'(x) B(y)
+    // u_y = A(x) B'(y)
     du_dn_left = [](double x, double y) {
-        // 左边界 x=0, n=(-1,0): ∂u/∂n = -u_x = -[(1-2*0)y(1-y)] = -y(1-y)
-        return -y * (1.0 - y);
+        // 左边界 x=0, n=(-1,0): ∂u/∂n = -u_x = -A'(0) B(y)
+        // A'(0) = 2*0 - 6*0 + 4*0 = 0
+        return 0.0;
     };
     du_dn_right = [](double x, double y) {
-        // 右边界 x=1, n=(1,0): ∂u/∂n = u_x = (1-2*1)y(1-y) = -y(1-y)
-        return -y * (1.0 - y);
+        // 右边界 x=1, n=(1,0): ∂u/∂n = u_x = A'(1) B(y)
+        // A'(1) = 2 - 6 + 4 = 0
+        return 0.0;
     };
     du_dn_bottom = [](double x, double y) {
-        // 下边界 y=0, n=(0,-1): ∂u/∂n = -u_y = -[x(1-x)(1-2*0)] = -x(1-x)
-        return -x * (1.0 - x);
+        // 下边界 y=0, n=(0,-1): ∂u/∂n = -u_y = -A(x) B'(0)
+        // B'(0) = 2*0 - 6*0 + 4*0 = 0
+        return 0.0;
     };
     du_dn_top = [](double x, double y) {
-        // 上边界 y=1, n=(0,1): ∂u/∂n = u_y = x(1-x)(1-2*1) = -x(1-x)
-        return -x * (1.0 - x);
+        // 上边界 y=1, n=(0,1): ∂u/∂n = u_y = A(x) B'(1)
+        // B'(1) = 2 - 6 + 4 = 0
+        return 0.0;
     };
 }
 
@@ -200,11 +213,19 @@ double TestFunction::getHoleNeumannBC(double x, double y, double nx, double ny) 
         return u * (cosx * nx + ny);
     }
     else if (name == "polynomial") {
-        // u = x(1-x)y(1-y)
-        // u_x = (1-2x)y(1-y)
-        // u_y = x(1-x)(1-2y)
-        double ux = (1.0 - 2.0 * x) * y * (1.0 - y);
-        double uy = x * (1.0 - x) * (1.0 - 2.0 * y);
+        // u = x^2(1-x)^2 y^2(1-y)^2
+        // A(x) = x^2 - 2x^3 + x^4
+        // A'(x) = 2x - 6x^2 + 4x^3
+        // B(y) = y^2 - 2y^3 + y^4
+        // B'(y) = 2y - 6y^2 + 4y^3
+        // u_x = A'(x) B(y)
+        // u_y = A(x) B'(y)
+        double A = x*x - 2.0*x*x*x + x*x*x*x;
+        double Aprime = 2.0*x - 6.0*x*x + 4.0*x*x*x;
+        double B = y*y - 2.0*y*y*y + y*y*y*y;
+        double Bprime = 2.0*y - 6.0*y*y + 4.0*y*y*y;
+        double ux = Aprime * B;
+        double uy = A * Bprime;
         return ux * nx + uy * ny;
     }
     else if (name == "trigonometric") {

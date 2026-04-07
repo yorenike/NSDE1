@@ -7,7 +7,7 @@ import re
 # 备份原始文件
 os.system("cp input.json input.json.backup")
 
-# 定义测试组（保持不变）
+# 定义测试组
 test_groups = [
     {
         "name": "Group1: Square, All Dirichlet",
@@ -21,14 +21,14 @@ test_groups = [
         }
     },
     {
-        "name": "Group2: Square, Mixed Boundary",
+        "name": "Group2: Square, Mixed Boundary (Left/Top Dirichlet, Right/Bottom Neumann)",
         "domain_type": "square",
         "hole": None,
         "boundary": {
             "left": {"type": "dirichlet", "value": "from_test_function"},
-            "right": {"type": "dirichlet", "value": "from_test_function"},
+            "right": {"type": "neumann", "value": "from_test_function"},
             "bottom": {"type": "neumann", "value": "from_test_function"},
-            "top": {"type": "neumann", "value": "from_test_function"}
+            "top": {"type": "dirichlet", "value": "from_test_function"}
         }
     },
     {
@@ -65,34 +65,35 @@ test_groups = [
         }
     },
     {
-        "name": "Group6: With Hole, Square Mixed, Hole Dirichlet",
+        "name": "Group6: With Hole, Square Mixed (Left/Top Dirichlet, Right/Bottom Neumann), Hole Dirichlet",
         "domain_type": "square_with_hole",
         "hole": {"type": "dirichlet", "value": "from_test_function"},
         "boundary": {
             "left": {"type": "dirichlet", "value": "from_test_function"},
-            "right": {"type": "dirichlet", "value": "from_test_function"},
+            "right": {"type": "neumann", "value": "from_test_function"},
             "bottom": {"type": "neumann", "value": "from_test_function"},
-            "top": {"type": "neumann", "value": "from_test_function"}
+            "top": {"type": "dirichlet", "value": "from_test_function"}
         }
     },
     {
-        "name": "Group7: With Hole, Square Mixed, Hole Neumann",
+        "name": "Group7: With Hole, Square Mixed (Left/Top Dirichlet, Right/Bottom Neumann), Hole Neumann",
         "domain_type": "square_with_hole",
         "hole": {"type": "neumann", "value": "from_test_function"},
         "boundary": {
             "left": {"type": "dirichlet", "value": "from_test_function"},
-            "right": {"type": "dirichlet", "value": "from_test_function"},
+            "right": {"type": "neumann", "value": "from_test_function"},
             "bottom": {"type": "neumann", "value": "from_test_function"},
-            "top": {"type": "neumann", "value": "from_test_function"}
+            "top": {"type": "dirichlet", "value": "from_test_function"}
         }
     }
 ]
 
-# 网格尺寸
-grid_sizes = [8, 16,  32, 64]
+# 网格尺寸（Group4 和 Group7 额外增加 n=100）
+grid_sizes_standard = [8, 16, 32, 64]
+grid_sizes_extra = [8, 16, 32, 64, 100]
 
 # 测试函数
-test_functions = ["exp_y_sin_x"]
+test_functions = [ "exp_y_sin_x", "polynomial","trigonometric"]
 
 # 圆孔参数
 hole_params = {
@@ -111,6 +112,13 @@ with open("test_results.txt", "w") as results_file:
     
     for test_func in test_functions:
         for group in test_groups:
+            # 判断是否需要使用额外的网格尺寸
+            if group["name"] in ["Group4: With Hole, Square Dirichlet, Hole Neumann", 
+                                  "Group7: With Hole, Square Mixed (Left/Top Dirichlet, Right/Bottom Neumann), Hole Neumann"]:
+                grid_sizes = grid_sizes_extra
+            else:
+                grid_sizes = grid_sizes_standard
+            
             for nx in grid_sizes:
                 print(f"\nTesting: {group['name']}, {test_func}, n={nx}")
                 
@@ -165,6 +173,9 @@ with open("test_results.txt", "w") as results_file:
                 else:
                     print("  Error: Could not extract error norms")
                     results_file.write("  Error: Could not extract error norms\n")
+                    # 调试：打印输出
+                    print("  Program output:")
+                    print(output[:500])
                 
                 # 删除临时文件
                 os.remove("input_temp.json")
